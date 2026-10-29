@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoveBook — Small Mover Estimate &amp; Job Book</title>
+<style>
+  :root{
+    --ink:#1c2430; --mut:#5b6774; --line:#d7dde3; --bg:#f4f2ec; --card:#ffffff;
+    --brand:#1f5fa8; --brand2:#3d84d6; --good:#1d7a3a; --bad:#b3261e; --warn:#fff4e0;
+    --chip:#eef1f4; --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45;}
+  header{background:linear-gradient(135deg,#14406e,var(--brand2));color:#fff;padding:14px 16px;}
+  header h1{margin:0;font-size:22px;letter-spacing:.2px;}
+  header .sub{opacity:.92;font-size:13px;margin-top:2px;}
+  nav{display:flex;flex-wrap:wrap;gap:6px;background:#fff;border-bottom:1px solid var(--line);padding:8px 10px;position:sticky;top:0;z-index:5;}
+  nav button{flex:1 1 auto;min-width:80px;padding:10px 6px;border:1px solid var(--line);background:var(--chip);border-radius:8px;font-size:14px;cursor:pointer;color:var(--ink);}
+  nav button.active{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600;}
+  main{max-width:1060px;margin:0 auto;padding:14px 12px 60px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
+  .card h2{margin:0 0 10px;font-size:17px;}
+  .card h3{margin:14px 0 8px;font-size:15px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 14px;}
+  @media (max-width:640px){.grid,.grid3{grid-template-columns:1fr;}}
+  label{display:block;font-size:13px;color:var(--mut);margin-bottom:3px;}
+  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font-size:15px;background:#fff;color:var(--ink);}
+  textarea{min-height:52px;resize:vertical;}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--brand2);outline-offset:0;border-color:var(--brand2);}
+  .btn{display:inline-block;padding:11px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
+  .btn.alt{background:#3c4754;}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);}
+  .btn.small{padding:7px 10px;font-size:13px;min-height:40px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .priceline{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px;}
+  .priceline b{white-space:nowrap;}
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;}
+  @media (max-width:640px){.three{grid-template-columns:1fr;}}
+  .pbox{border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center;background:#fbfaf7;}
+  .pbox .lab{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;}
+  .pbox .val{font-size:21px;font-weight:800;margin-top:2px;}
+  .pbox.rec{border-color:var(--brand);background:#eaf2fb;}
+  .pbox.nte{border-color:#7a5b12;background:#fdf6e0;}
+  .floorwarn{background:var(--warn);border:1px solid #e6b800;border-radius:8px;padding:10px;margin-top:10px;font-size:14px;}
+  .floorok{background:#eaf6ee;border:1px solid var(--good);border-radius:8px;padding:10px;margin-top:10px;font-size:14px;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top;}
+  th{color:var(--mut);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;}
+  td.num,th.num{text-align:right;white-space:nowrap;}
+  .tablewrap{overflow-x:auto;}
+  .invrow{display:grid;grid-template-columns:1fr 64px 74px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--line);}
+  .invrow .nm{font-size:14px;}
+  .invrow .cf{font-size:12.5px;color:var(--mut);text-align:right;white-space:nowrap;}
+  .invrow input{padding:7px 8px;}
+  .roomtitle{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--brand);margin:12px 0 2px;}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:12px;font-weight:600;background:var(--chip);}
+  .tag.quoted{background:#e3ecf7;} .tag.booked{background:#fdf3e7;} .tag.completed{background:#eaf6ee;} .tag.lost{background:#f7e3e1;}
+  .tag.open{background:#f7e3e1;} .tag.settled{background:#eaf6ee;} .tag.denied{background:#eef1f4;}
+  .tag.in{background:#eaf6ee;} .tag.out{background:#eef1f4;}
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media (max-width:800px){.statgrid{grid-template-columns:repeat(2,1fr);}}
+  .stat{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fbfaf7;}
+  .stat .lab{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;}
+  .stat .val{font-size:20px;font-weight:800;margin-top:2px;}
+  .muted{color:var(--mut);font-size:13px;}
+  .rowflex{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .spacer{flex:1;}
+  .jobcard{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;background:#fff;}
+  .jobhead{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;cursor:pointer;}
+  .jobbody{display:none;margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;}
+  .jobbody.open{display:block;}
+  .hidden{display:none !important;}
+  #printSheet{display:none;}
+  @media print{
+    body{background:#fff;}
+    header,nav,main,.noprint{display:none !important;}
+    #printSheet{display:block !important;padding:10px;font-size:13px;color:#000;}
+    #printSheet h1{font-size:20px;margin:0 0 2px;}
+    #printSheet table td,#printSheet table th{border-bottom:1px solid #bbb;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>📦 MoveBook</h1>
+  <div class="sub">Small mover estimate &amp; job book — cube-sheet estimates, honest hours, claims and storage records. Works 100% offline.</div>
+</header>
+<nav id="tabs">
+  <button data-tab="estimate" class="active">New Estimate</button>
+  <button data-tab="jobs">Job Book</button>
+  <button data-tab="claims">Claims</button>
+  <button data-tab="storage">Storage</button>
+  <button data-tab="dash">Dashboard</button>
+  <button data-tab="settings">Settings</button>
+  <button data-tab="help">Help</button>
+</nav>
+<main>
+  <!-- ============ ESTIMATE TAB ============ -->
+  <section id="tab-estimate">
+    <div class="card">
+      <h2>Customer &amp; move</h2>
+      <div class="grid">
+        <div><label>Customer name *</label><input id="cName" type="text" placeholder="e.g. The Hendersons"></div>
+        <div><label>Phone</label><input id="cPhone" type="text" placeholder="(555) 010-2030"></div>
+        <div><label>Moving from</label><input id="cFrom" type="text" placeholder="Current address"></div>
+        <div><label>Moving to</label><input id="cTo" type="text" placeholder="New address"></div>
+        <div><label>Move date</label><input id="cDate" type="date"></div>
+        <div><label>Distance, one way (miles)</label><input inputmode="decimal" id="cDist" type="number" min="0" step="0.5" value="10"></div>
+      </div>
+      <div style="margin-top:10px;"><label>Notes (stairs, elevator, long carry, access…)</label><textarea id="cNotes" placeholder="Anything the crew should know"></textarea></div>
+    </div>
+
+    <div class="card">
+      <h2>Room-by-room inventory (cube sheet)</h2>
+      <p class="muted" style="margin-top:0;">Enter quantities. Cubic feet use standard mover cube-sheet values — edit any item's cube in Settings. Boxes you pack count too.</p>
+      <div id="invList"></div>
+      <h3>Add a custom item</h3>
+      <div class="grid3">
+        <div><label>Item name</label><input id="ciName" type="text" placeholder="e.g. Aquarium stand"></div>
+        <div><label>Cubic feet</label><input inputmode="decimal" id="ciCuft" type="number" min="0" step="1" value="10"></div>
+        <div><label>Qty</label><input inputmode="decimal" id="ciQty" type="number" min="0" step="1" value="1"></div>
+      </div>
+      <div class="rowflex" style="margin-top:8px;"><button class="btn small alt" id="ciAdd">Add custom item</button></div>
+      <div id="customList" style="margin-top:6px;"></div>
+      <div class="priceline" style="margin-top:10px;"><span><b>Total volume</b></span><b id="sumCuft">0 cu ft</b></div>
+      <div class="priceline"><span>Estimated weight (at <span id="sumDensity">7</span> lb/cu ft)</span><b id="sumWeight">0 lb</b></div>
+    </div>
+
+    <div class="card">
+      <h2>Extras &amp; upcharges</h2>
+      <div id="upList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Estimate</h2>
+      <div id="estLines"></div>
+      <div class="three">
+        <div class="pbox"><div class="lab">Break-even</div><div class="val" id="pBE">$0</div></div>
+        <div class="pbox rec"><div class="lab">Recommended</div><div class="val" id="pRec">$0</div></div>
+        <div class="pbox"><div class="lab">Premium</div><div class="val" id="pPrem">$0</div></div>
+      </div>
+      <div class="three">
+        <div class="pbox nte"><div class="lab">Not-to-exceed</div><div class="val" id="pNTE">$0</div></div>
+        <div class="pbox"><div class="lab">Crew</div><div class="val" id="pCrew">–</div></div>
+        <div class="pbox"><div class="lab">Truck</div><div class="val" id="pTruck" style="font-size:16px;">–</div></div>
+      </div>
+      <div class="grid" style="margin-top:12px;">
+        <div><label>Final price quoted to customer ($)</label><input inputmode="decimal" id="fPrice" type="number" min="0" step="0.01"></div>
+        <div><label>Estimated billable hours</label><input id="fHours" type="text" readonly></div>
+      </div>
+      <div id="floorBox"></div>
+      <div class="rowflex" style="margin-top:12px;">
+        <button class="btn" id="btnSaveQuote">Save estimate to Job Book</button>
+        <button class="btn ghost" id="btnPrintQuote">Print quote sheet</button>
+        <button class="btn ghost" id="btnResetDraft">Start over</button>
+      </div>
+      <div id="saveMsg" class="muted" style="margin-top:8px;"></div>
+    </div>
+  </section>
+
+  <!-- ============ JOB BOOK TAB ============ -->
+  <section id="tab-jobs" class="hidden">
+    <div class="card">
+      <h2>Job Book</h2>
+      <p class="muted" style="margin-top:0;">Tap a job to open it. When a job is done, enter the actual hours, miles, materials and what you collected — MoveBook shows the true profit and how far the actual hours ran from the estimate.</p>
+      <div id="jobList"></div>
+    </div>
+  </section>
+
+  <!-- ============ CLAIMS TAB ============ -->
+  <section id="tab-claims" class="hidden">
+    <div class="card">
+      <h2>Damage &amp; claims log</h2>
+      <p class="muted" style="margin-top:0;">The paper trail for when a claim lands: what was damaged, when, what was claimed, and how it settled.</p>
+      <div class="grid3">
+        <div><label>Customer</label><input id="clCustomer" type="text" placeholder="Customer name"></div>
+        <div><label>Date</label><input id="clDate" type="date"></div>
+        <div><label>Item damaged</label><input id="clItem" type="text" placeholder="e.g. Dining table"></div>
+        <div><label>Amount claimed ($)</label><input inputmode="decimal" id="clClaimed" type="number" min="0" step="0.01" value="0"></div>
+        <div><label>Status</label><select id="clStatus"><option value="open">Open</option><option value="settled">Settled</option><option value="denied">Denied</option></select></div>
+        <div><label>Amount settled ($)</label><input inputmode="decimal" id="clSettled" type="number" min="0" step="0.01" value="0"></div>
+      </div>
+      <div style="margin-top:10px;"><label>What happened / notes</label><textarea id="clDesc" placeholder="Scratch found at delivery, noted on inventory sheet…"></textarea></div>
+      <div class="rowflex" style="margin-top:10px;"><button class="btn small" id="btnAddClaim">Add claim</button><span id="claimMsg" class="muted"></span></div>
+    </div>
+    <div class="card">
+      <h2>Claims on record</h2>
+      <div id="claimStats" style="margin-bottom:10px;"></div>
+      <div id="claimList"></div>
+    </div>
+  </section>
+
+  <!-- ============ STORAGE TAB ============ -->
+  <section id="tab-storage" class="hidden">
+    <div class="card">
+      <h2>Storage holdings</h2>
+      <p class="muted" style="margin-top:0;">Goods you're holding for customers — unit, start date, monthly fee. MoveBook tracks months stored and total billed.</p>
+      <div class="grid3">
+        <div><label>Customer</label><input id="stCustomer" type="text" placeholder="Customer name"></div>
+        <div><label>Unit / location</label><input id="stUnit" type="text" placeholder="e.g. Unit A3"></div>
+        <div><label>Start date</label><input id="stStart" type="date"></div>
+        <div><label>Monthly fee ($)</label><input inputmode="decimal" id="stFee" type="number" min="0" step="0.01" value="95"></div>
+        <div><label>Status</label><select id="stStatus"><option value="in">In storage</option><option value="out">Moved out</option></select></div>
+        <div><label>End date (if out)</label><input id="stEnd" type="date"></div>
+      </div>
+      <div class="rowflex" style="margin-top:10px;"><button class="btn small" id="btnAddStorage">Add storage record</button><span id="storageMsg" class="muted"></span></div>
+    </div>
+    <div class="card">
+      <h2>On the books</h2>
+      <div id="storageStats" style="margin-bottom:10px;"></div>
+      <div id="storageList"></div>
+    </div>
+  </section>
+
+  <!-- ============ DASHBOARD TAB ============ -->
+  <section id="tab-dash" class="hidden">
+    <div class="card">
+      <h2>Dashboard</h2>
+      <div class="statgrid" id="dashStats"></div>
+    </div>
+    <div class="card">
+      <h2>Estimate accuracy — where the hours leak</h2>
+      <div id="dashAccuracy"></div>
+    </div>
+    <div class="card">
+      <h2>Best customers</h2>
+      <div id="dashCustomers"></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS TAB ============ -->
+  <section id="tab-settings" class="hidden">
+<div class="card"><h3 style="margin-top:0">Legal</h3><p>Terms of Use, the applicable disclaimer, our privacy statement, and your recorded acceptance.</p><button type="button" class="btn ww-legal-open-btn" data-ww-legal="1">⚖️ Legal — Terms, Disclaimer &amp; Privacy</button></div>
+    <div class="card">
+      <h2>Company</h2>
+      <div class="grid">
+        <div><label>Company name (prints on quotes)</label><input id="sCompany" type="text"></div>
+        <div><label>Phone (prints on quotes)</label><input id="sPhone" type="text"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Rates &amp; rules</h2>
+      <div class="grid3">
+        <div><label>Weight density (lb per cu ft)</label><input inputmode="decimal" id="sDensity" type="number" min="0" step="0.1"></div>
+        <div><label>Crew cost per mover-hour ($) — your cost</label><input inputmode="decimal" id="sMoverCost" type="number" min="0" step="0.5"></div>
+        <div><label>Charge per mover-hour ($) — customer rate</label><input inputmode="decimal" id="sMoverCharge" type="number" min="0" step="0.5"></div>
+        <div><label>Loading rate (cu ft per mover-hour)</label><input inputmode="decimal" id="sLoadRate" type="number" min="1" step="1"></div>
+        <div><label>Unloading rate (cu ft per mover-hour)</label><input inputmode="decimal" id="sUnloadRate" type="number" min="1" step="1"></div>
+        <div><label>Average road speed (mph)</label><input inputmode="decimal" id="sAvgSpeed" type="number" min="1" step="1"></div>
+        <div><label>Truck cost per mile ($)</label><input inputmode="decimal" id="sCostPerMile" type="number" min="0" step="0.05"></div>
+        <div><label>Flat travel fee charged ($)</label><input inputmode="decimal" id="sTravelFee" type="number" min="0" step="1"></div>
+        <div><label>Boxes per 100 cu ft (materials estimate)</label><input inputmode="decimal" id="sBoxesPer100" type="number" min="0" step="0.5"></div>
+        <div><label>Cost per box ($)</label><input inputmode="decimal" id="sBoxCost" type="number" min="0" step="0.25"></div>
+        <div><label>Flat supplies — tape, wrap, blankets ($)</label><input inputmode="decimal" id="sFlatSupplies" type="number" min="0" step="1"></div>
+        <div><label>Target margin (%)</label><input inputmode="decimal" id="sTargetMargin" type="number" min="0" max="95" step="1"></div>
+        <div><label>Profit floor margin (%) — quotes below this warn</label><input inputmode="decimal" id="sFloorMargin" type="number" min="0" max="95" step="1"></div>
+        <div><label>Premium multiplier (×)</label><input inputmode="decimal" id="sPremiumMult" type="number" min="1" step="0.05"></div>
+        <div><label>Not-to-exceed add-on (×)</label><input inputmode="decimal" id="sNteFactor" type="number" min="1" step="0.05"></div>
+      </div>
+      <h3>Crew size rules</h3>
+      <div class="grid3">
+        <div><label>2 movers up to (cu ft)</label><input inputmode="decimal" id="sCrew2Max" type="number" min="0" step="10"></div>
+        <div><label>3 movers up to (cu ft)</label><input inputmode="decimal" id="sCrew3Max" type="number" min="0" step="10"></div>
+        <div><label>Above that</label><input type="text" value="4 movers" readonly></div>
+      </div>
+      <h3>Trucks</h3>
+      <div class="grid3">
+        <div><label>Truck 1 name</label><input id="sTruck1Name" type="text"></div>
+        <div><label>Truck 1 capacity (cu ft)</label><input inputmode="decimal" id="sTruck1Cuft" type="number" min="0" step="10"></div>
+        <div></div>
+        <div><label>Truck 2 name</label><input id="sTruck2Name" type="text"></div>
+        <div><label>Truck 2 capacity (cu ft)</label><input inputmode="decimal" id="sTruck2Cuft" type="number" min="0" step="10"></div>
+        <div></div>
+        <div><label>Truck 3 name</label><input id="sTruck3Name" type="text"></div>
+        <div><label>Truck 3 capacity (cu ft)</label><input inputmode="decimal" id="sTruck3Cuft" type="number" min="0" step="10"></div>
+        <div></div>
+      </div>
+      <p class="muted">Settings save automatically as you type.</p>
+    </div>
+    <div class="card">
+      <h2>Upcharge list</h2>
+      <p class="muted" style="margin-top:0;">Fees for the heavy/awkward work. Edit names and fees; add your own.</p>
+      <div id="upEditList"></div>
+      <div class="rowflex" style="margin-top:8px;"><button class="btn small alt" id="btnAddUpcharge">Add upcharge</button></div>
+    </div>
+    <div class="card">
+      <h2>Cube-sheet catalog</h2>
+      <p class="muted" style="margin-top:0;">Standard mover cubic-foot values. Fix any value to match how YOUR crew packs; add items you move often.</p>
+      <div id="catEditList"></div>
+      <div class="grid3" style="margin-top:10px;">
+        <div><label>New item name</label><input id="ncName" type="text" placeholder="e.g. Peloton bike"></div>
+        <div><label>Room</label><input id="ncRoom" type="text" placeholder="e.g. Bedroom"></div>
+        <div><label>Cubic feet</label><input inputmode="decimal" id="ncCuft" type="number" min="0" step="1" value="10"></div>
+      </div>
+      <div class="rowflex" style="margin-top:8px;"><button class="btn small alt" id="btnAddCatalog">Add catalog item</button></div>
+    </div>
+    <div class="card">
+      <h2>Your data</h2>
+      <div class="rowflex">
+        <button class="btn alt" id="btnExport">Export backup (JSON)</button>
+        <button class="btn ghost" id="btnImportBtn">Import backup</button>
+        <input type="file" id="fileImport" accept=".json,application/json" class="hidden">
+        <button class="btn ghost" id="btnClearDemo">Clear sample data</button>
+        <button class="btn ghost" id="btnErase">Erase everything</button>
+      </div>
+      <div id="dataMsg" class="muted" style="margin-top:8px;"></div>
+    </div>
+  </section>
+
+  <!-- ============ HELP TAB ============ -->
+  <section id="tab-help" class="hidden">
+    <div class="card">
+      <h2>How MoveBook prices a move</h2>
+      <p><b>Volume first.</b> The cube sheet adds up every item's cubic feet. Weight is estimated at your density setting (7 lb/cu ft is the industry planning standard for household goods). Crew size and truck come from your rules — the smallest truck that fits, and a crew matched to the volume.</p>
+      <p><b>Hours.</b> Loading hours = volume ÷ (crew × your loading rate). Unloading the same way at the unloading rate. Travel time = round-trip miles ÷ average speed. Billable hours round up to the nearest half hour, the way movers actually bill.</p>
+      <p><b>Three prices.</b> <b>Break-even</b> is your true cost: crew cost for the billable hours, truck cost for the round trip, packing materials, all in. <b>Recommended</b> is the higher of (a) the hourly way movers quote — billable hours × your per-mover charge, plus the flat travel fee, materials and upcharges — and (b) the price that delivers your target margin on cost. If your hourly rate would underprice an expensive job, the margin price wins and you can see why. <b>Premium</b> is Recommended × your premium multiplier, for weekends, rush jobs and end-of-month crunches.</p>
+      <p><b>Not-to-exceed.</b> The NTE number is Recommended × your NTE add-on (default 1.10). Quote the estimate, promise the ceiling: "the estimate is $X; it will not exceed $Y." Customers love a ceiling, and the 10% cushion covers the usual surprises.</p>
+      <p><b>Profit floor.</b> If you type a final price below the price that delivers your floor margin, MoveBook warns you in red and won't save until you raise the price or tick the deliberate-override box.</p>
+      <p><b>After the job.</b> Enter actual hours, crew, miles, materials and what you collected on the Job Book. MoveBook computes the true profit and the hours variance — estimated vs. actual — so you can see which kinds of jobs leak hours and fix your rates.</p>
+      <h3>Honest limits</h3>
+      <p>MoveBook is an estimating and records tool. It does not dispatch crews, take bookings online, process payments, or replace your state's moving tariff/contract requirements — many states require specific written estimates and valuation paperwork; keep using your compliant forms for the legal documents and use MoveBook for the numbers and the records. Weight is an estimate, not a scale ticket. Data lives only in this browser on this device — export a backup before switching devices, and note that clearing browser site data erases it.</p>
+      <h3>Claims &amp; storage</h3>
+      <p>Log every damage claim the day it happens — item, description, photos noted, amount claimed, how it settled. When a claim lands months later, the log is your paper trail. Storage records track who has goods with you, since when, at what monthly fee, and the total billed to date.</p>
+    </div>
+  </section>
+</main>
+
+<div id="printSheet"></div>
+
+<script>
+"use strict";
+/* ================= MoveBook — state ================= */
+var LS_KEY = "movebook_v1";
+var state = null;
+
+function defaultCatalog(){
+  return [
+    {name:"Sofa (3-seat)", room:"Living Room", cuft:60},
+    {name:"Loveseat", room:"Living Room", cuft:45},
+    {name:"Armchair / recliner", room:"Living Room", cuft:25},
+    {name:"Coffee table", room:"Living Room", cuft:10},
+    {name:"End table", room:"Living Room", cuft:5},
+    {name:"TV stand / console", room:"Living Room", cuft:15},
+    {name:"Entertainment center", room:"Living Room", cuft:40},
+    {name:"Bookshelf", room:"Living Room", cuft:20},
+    {name:"Floor lamp", room:"Living Room", cuft:5},
+    {name:"Rolled rug", room:"Living Room", cuft:5},
+    {name:"Upright piano", room:"Living Room", cuft:60},
+    {name:"Refrigerator", room:"Kitchen", cuft:30},
+    {name:"Stove / range", room:"Kitchen", cuft:15},
+    {name:"Dishwasher", room:"Kitchen", cuft:10},
+    {name:"Washer", room:"Kitchen", cuft:15},
+    {name:"Dryer", room:"Kitchen", cuft:15},
+    {name:"Kitchen table", room:"Kitchen", cuft:20},
+    {name:"Kitchen chair", room:"Kitchen", cuft:5},
+    {name:"Microwave", room:"Kitchen", cuft:4},
+    {name:"Queen bed (frame + mattress)", room:"Bedroom", cuft:65},
+    {name:"King bed (frame + mattress)", room:"Bedroom", cuft:80},
+    {name:"Twin / full bed", room:"Bedroom", cuft:50},
+    {name:"Dresser", room:"Bedroom", cuft:30},
+    {name:"Nightstand", room:"Bedroom", cuft:10},
+    {name:"Chest of drawers", room:"Bedroom", cuft:25},
+    {name:"Crib", room:"Bedroom", cuft:20},
+    {name:"Desk (bedroom/office)", room:"Bedroom", cuft:25},
+    {name:"Wardrobe box", room:"Bedroom", cuft:10},
+    {name:"Dining table", room:"Dining Room", cuft:30},
+    {name:"Dining chair", room:"Dining Room", cuft:5},
+    {name:"China cabinet / hutch", room:"Dining Room", cuft:35},
+    {name:"Buffet / sideboard", room:"Dining Room", cuft:25},
+    {name:"Office desk", room:"Office", cuft:30},
+    {name:"Office chair", room:"Office", cuft:10},
+    {name:"Filing cabinet", room:"Office", cuft:15},
+    {name:"Bookcase (office)", room:"Office", cuft:20},
+    {name:"Small box (1.5 cu ft)", room:"Boxes", cuft:2},
+    {name:"Medium box (3 cu ft)", room:"Boxes", cuft:3},
+    {name:"Large box (6 cu ft)", room:"Boxes", cuft:6},
+    {name:"Dish pack box", room:"Boxes", cuft:6},
+    {name:"Plastic tote / bin", room:"Boxes", cuft:4},
+    {name:"Treadmill / exercise machine", room:"Garage & Misc", cuft:30},
+    {name:"Bicycle", room:"Garage & Misc", cuft:8},
+    {name:"Grill", room:"Garage & Misc", cuft:10},
+    {name:"Patio furniture set", room:"Garage & Misc", cuft:30},
+    {name:"Lawn mower", room:"Garage & Misc", cuft:12},
+    {name:"Safe", room:"Garage & Misc", cuft:20},
+    {name:"Tool chest", room:"Garage & Misc", cuft:15},
+    {name:"Hot tub / spa", room:"Garage & Misc", cuft:100}
+  ];
+}
+function defaultUpcharges(){
+  return [
+    {name:"Upright piano handling", fee:150},
+    {name:"Grand piano handling", fee:350},
+    {name:"Pool table (slate)", fee:300},
+    {name:"Safe over 300 lb", fee:125},
+    {name:"Stairs — per flight, load or unload", fee:75},
+    {name:"Elevator building", fee:60},
+    {name:"Long carry over 75 ft", fee:60},
+    {name:"Hot tub move", fee:250},
+    {name:"Shuttle (truck can't reach)", fee:150},
+    {name:"Hoisting / balcony", fee:200}
+  ];
+}
+function defaultSettings(){
+  return {
+    company:"", phone:"",
+    density:7, moverCost:30, moverCharge:65,
+    loadRate:100, unloadRate:125, avgSpeed:30,
+    costPerMile:1.25, travelFee:75,
+    boxesPer100:6, boxCost:3.50, flatSupplies:15,
+    targetMargin:35, floorMargin:25, premiumMult:1.15, nteFactor:1.10,
+    crew2Max:300, crew3Max:700,
+    trucks:[{name:"16 ft truck", cuft:800},{name:"20 ft truck", cuft:1000},{name:"26 ft truck", cuft:1700}],
+    catalog:defaultCatalog(), upcharges:defaultUpcharges()
+  };
+}
+function blankDraft(){
+  return { customer:"", phone:"", from:"", to:"", date:"", distanceMi:10, notes:"",
+           qty:{}, custom:[], ups:{}, finalPrice:null, override:false };
+}
+function seedState(){
+  var s = { settings:defaultSettings(), jobs:[], claims:[], storage:[], draft:blankDraft(), seeded:true };
+  function job(o){ o.id = uid(); o.demo = true; s.jobs.push(o); }
+  job({ customer:"The Hendersons", phone:"(555) 214-8890", from:"1412 Elm St", to:"88 County Rd 4", date:"2026-10-18", distanceMi:12,
+        items:[{name:"Sofa (3-seat)",cuft:60,qty:1},{name:"Queen bed (frame + mattress)",cuft:65,qty:1},{name:"Dresser",cuft:30,qty:1},{name:"Dining table",cuft:30,qty:1},{name:"Refrigerator",cuft:30,qty:1},{name:"Washer",cuft:15,qty:1},{name:"Dryer",cuft:15,qty:1},{name:"Medium box (3 cu ft)",cuft:3,qty:40},{name:"Large box (6 cu ft)",cuft:6,qty:15},{name:"Bookshelf",cuft:20,qty:2},{name:"Office desk",cuft:30,qty:1},{name:"Grill",cuft:10,qty:1}],
+        ups:[{name:"Stairs — per flight, load or unload",fee:75,qty:1}],
+        cuft:620, price:1189, status:"completed",
+        actuals:{ hours:6.5, crew:3, miles:26, materials:118, collected:1189 }, notes:"Two-story load-out; smooth unload." });
+  job({ customer:"Sarah Kim", phone:"(555) 902-4417", from:"Apt 4B, 220 Pine Ave", to:"1200 Lakeview Dr", date:"2026-10-31", distanceMi:6,
+        items:[{name:"Loveseat",cuft:45,qty:1},{name:"Queen bed (frame + mattress)",cuft:65,qty:1},{name:"Nightstand",cuft:10,qty:2},{name:"Desk (bedroom/office)",cuft:25,qty:1},{name:"Medium box (3 cu ft)",cuft:3,qty:18},{name:"Wardrobe box",cuft:10,qty:2},{name:"Bicycle",cuft:8,qty:1}],
+        ups:[{name:"Elevator building",fee:60,qty:1}],
+        cuft:237, price:649, status:"booked", actuals:null, notes:"Elevator reserved 9 AM–noon." });
+  job({ customer:"David Osei", phone:"(555) 377-1204", from:"9 Birchwood Ln", to:"45 Industrial Pkwy (storage)", date:"2026-11-04", distanceMi:18,
+        items:[{name:"Sofa (3-seat)",cuft:60,qty:1},{name:"Armchair / recliner",cuft:25,qty:2},{name:"King bed (frame + mattress)",cuft:80,qty:1},{name:"China cabinet / hutch",cuft:35,qty:1},{name:"Upright piano",cuft:60,qty:1},{name:"Large box (6 cu ft)",cuft:6,qty:20},{name:"Safe",cuft:20,qty:1}],
+        ups:[{name:"Upright piano handling",fee:150,qty:1},{name:"Safe over 300 lb",fee:125,qty:1}],
+        cuft:445, price:1140, status:"quoted", actuals:null, notes:"Piano to ground floor only." });
+  job({ customer:"The Parkers", phone:"(555) 640-7731", from:"302 Willow Creek", to:"517 Magnolia St", date:"2026-10-11", distanceMi:9,
+        items:[{name:"Sofa (3-seat)",cuft:60,qty:1},{name:"Dining table",cuft:30,qty:1},{name:"Dining chair",cuft:5,qty:6},{name:"Queen bed (frame + mattress)",cuft:65,qty:1},{name:"Dresser",cuft:30,qty:1},{name:"Refrigerator",cuft:30,qty:1},{name:"Medium box (3 cu ft)",cuft:3,qty:30},{name:"Treadmill / exercise machine",cuft:30,qty:1},{name:"Patio furniture set",cuft:30,qty:1}],
+        ups:[],
+        cuft:425, price:935, status:"completed",
+        actuals:{ hours:5.5, crew:3, miles:19, materials:96, collected:935 }, notes:"Dining table leg scratched — see claims log." });
+  job({ customer:"Maria Gonzalez", phone:"(555) 118-6630", from:"77 Sunset Ter", to:"201 Harbor View", date:"2026-10-20", distanceMi:14,
+        items:[{name:"Loveseat",cuft:45,qty:1},{name:"Twin / full bed",cuft:50,qty:2},{name:"Kitchen table",cuft:20,qty:1},{name:"Medium box (3 cu ft)",cuft:3,qty:25}],
+        ups:[],
+        cuft:240, price:610, status:"lost", actuals:null, notes:"Went with a cheaper quote." });
+  s.claims.push({ id:uid(), demo:true, jobCustomer:"The Parkers", date:"2026-10-11", item:"Dining table — leg scratch",
+                  desc:"Scratch on table leg found at delivery, noted on inventory sheet and photographed.", claimed:350, status:"open", settled:0 });
+  s.claims.push({ id:uid(), demo:true, jobCustomer:"The Hendersons", date:"2026-10-18", item:"Floor lamp — bent shade",
+                  desc:"Lamp shade bent during load. Customer accepted $60 toward a replacement.", claimed:75, status:"settled", settled:60 });
+  s.storage.push({ id:uid(), demo:true, customer:"J. Alvarez", unit:"Unit A3", start:"2026-08-15", fee:95, status:"in", end:"" });
+  s.storage.push({ id:uid(), demo:true, customer:"The Nguyen Family", unit:"Unit B1", start:"2026-09-01", fee:120, status:"in", end:"" });
+  s.storage.push({ id:uid(), demo:true, customer:"R. Thompson", unit:"Unit A1", start:"2026-06-01", fee:85, status:"out", end:"2026-09-15" });
+  return s;
+}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{ var raw = localStorage.getItem(LS_KEY); if(raw){ var p = JSON.parse(raw); if(p && p.settings && p.jobs && p.claims && p.storage && p.draft) { state = p; return; } } }catch(e){}
+  state = seedState(); save();
+}
+
+/* ================= helpers ================= */
+function $(id){ return document.getElementById(id); }
+function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function num(v, d){ var n = parseFloat(v); return isFinite(n) ? n : (d||0); }
+function uid(){ return "m" + Date.now().toString(36) + Math.floor(Math.random()*9999); }
+function money(n){ var neg = n < 0; var a = Math.abs(Math.round(n*100)/100); var s = a.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); return (neg?"−$":"$") + s; }
+function round2(n){ return Math.round(n*100)/100; }
+function roundUpHalf(h){ return Math.ceil(h*2)/2; }
+function todayStr(){ var d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+
+/* ================= estimate math (pure) ================= */
+function crewFor(cuft, s){
+  if(cuft <= num(s.crew2Max,300)) return 2;
+  if(cuft <= num(s.crew3Max,700)) return 3;
+  return 4;
+}
+function truckFor(cuft, s){
+  var ts = (s.trucks||[]).slice().sort(function(a,b){ return num(a.cuft,0)-num(b.cuft,0); });
+  for(var i=0;i<ts.length;i++){ if(cuft <= num(ts[i].cuft,0)) return { name:ts[i].name, cuft:num(ts[i].cuft,0), trips:1 }; }
+  if(ts.length){ var big = ts[ts.length-1]; return { name:big.name+" × "+Math.ceil(cuft/Math.max(1,num(big.cuft,1)))+" trips", cuft:num(big.cuft,0), trips:Math.ceil(cuft/Math.max(1,num(big.cuft,1))) }; }
+  return { name:"—", cuft:0, trips:1 };
+}
+function draftItems(d, s){
+  var out = [], i, it;
+  for(i=0;i<s.catalog.length;i++){ it = s.catalog[i]; var q = num(d.qty[it.name],0); if(q>0) out.push({ name:it.name, cuft:num(it.cuft,0), qty:q }); }
+  for(i=0;i<(d.custom||[]).length;i++){ it = d.custom[i]; if(num(it.qty,0)>0) out.push({ name:it.name, cuft:num(it.cuft,0), qty:num(it.qty,0) }); }
+  return out;
+}
+function draftUps(d, s){
+  var out = [];
+  for(var i=0;i<s.upcharges.length;i++){ var u = s.upcharges[i]; var q = num(d.ups[u.name],0); if(q>0) out.push({ name:u.name, fee:num(u.fee,0), qty:q }); }
+  return out;
+}
+function computeEst(d, s){
+  var items = draftItems(d, s), ups = draftUps(d, s), i;
+  var cuft = 0; for(i=0;i<items.length;i++) cuft += items[i].cuft*items[i].qty;
+  var weight = cuft * num(s.density,7);
+  var crew = crewFor(cuft, s), truck = truckFor(cuft, s);
+  var loadH = crew>0 ? cuft/(crew*num(s.loadRate,100)) : 0;
+  var unloadH = crew>0 ? cuft/(crew*num(s.unloadRate,125)) : 0;
+  var rtMi = Math.max(0, num(d.distanceMi,0))*2;
+  var travelH = rtMi/Math.max(1,num(s.avgSpeed,30));
+  var billH = roundUpHalf(loadH+unloadH+travelH);
+  var laborCost = billH*crew*num(s.moverCost,30);
+  var travelCost = rtMi*num(s.costPerMile,1.25);
+  var boxes = Math.ceil(cuft*num(s.boxesPer100,6)/100);
+  var materials = boxes*num(s.boxCost,3.5) + num(s.flatSupplies,15);
+  var upTotal = 0; for(i=0;i<ups.length;i++) upTotal += ups[i].fee*ups[i].qty;
+  var cost = laborCost + travelCost + materials;
+  var hourlyPrice = billH*crew*num(s.moverCharge,65) + num(s.travelFee,75) + materials + upTotal;
+  var tm = Math.min(0.95, Math.max(0, num(s.targetMargin,35)/100));
+  var marginPrice = tm < 1 ? (cost + upTotal) / (1 - tm) : cost + upTotal;
+  var recommended = Math.max(hourlyPrice, marginPrice);
+  var premium = recommended * num(s.premiumMult,1.15);
+  var nte = recommended * num(s.nteFactor,1.10);
+  var fm = Math.min(0.95, Math.max(0, num(s.floorMargin,25)/100));
+  var floorPrice = fm < 1 ? (cost + upTotal) / (1 - fm) : cost + upTotal;
+  return { items:items, ups:ups, cuft:cuft, weight:weight, crew:crew, truck:truck,
+           loadH:loadH, unloadH:unloadH, travelH:travelH, billH:billH,
+           laborCost:laborCost, travelCost:travelCost, boxes:boxes, materials:materials,
+           upTotal:upTotal, cost:cost, hourlyPrice:hourlyPrice, marginPrice:marginPrice,
+           recommended:recommended, premium:premium, nte:nte, floorPrice:floorPrice, rtMi:rtMi };
+}
+function marginAt(price, cost){ return price > 0 ? (price-cost)/price : 0; }
+function jobEstHours(j, s){
+  /* recompute the estimated billable hours for a saved job from its saved inventory */
+  var d = blankDraft(); d.distanceMi = num(j.distanceMi,0);
+  var cuft = num(j.cuft,0);
+  var crew = crewFor(cuft, s);
+  var loadH = crew>0 ? cuft/(crew*num(s.loadRate,100)) : 0;
+  var unloadH = crew>0 ? cuft/(crew*num(s.unloadRate,125)) : 0;
+  var travelH = (Math.max(0, num(j.distanceMi,0))*2)/Math.max(1,num(s.avgSpeed,30));
+  return roundUpHalf(loadH+unloadH+travelH);
+}
+function jobActualsCalc(j, s){
+  var a = j.actuals; if(!a) return null;
+  var labor = num(a.hours,0)*num(a.crew,0)*num(s.moverCost,30);
+  var travel = num(a.miles,0)*num(s.costPerMile,1.25);
+  var cost = labor + travel + num(a.materials,0);
+  var profit = num(a.collected,0) - cost;
+  return { labor:labor, travel:travel, cost:cost, profit:profit };
+}
+function storageMonths(st, now){
+  var start = new Date(st.start+"T00:00:00"); if(isNaN(start)) return 0;
+  var end = (st.status === "out" && st.end) ? new Date(st.end+"T00:00:00") : (now || new Date());
+  if(isNaN(end)) end = new Date();
+  var days = Math.max(0, (end - start)/86400000);
+  return Math.round((days/30.4375)*10)/10;
+}
+</script>
+<script>
+"use strict";
+/* ================= rendering & interaction ================= */
+var curEst = null;      // last computed estimate for the draft
+var finalTouched = false;
+
+function showTab(name){
+  var tabs = ["estimate","jobs","claims","storage","dash","settings","help"];
+  for(var i=0;i<tabs.length;i++){ var sec = $("tab-"+tabs[i]); if(sec) sec.classList.toggle("hidden", tabs[i]!==name); }
+  var btns = document.querySelectorAll("#tabs button");
+  for(var j=0;j<btns.length;j++) btns[j].classList.toggle("active", btns[j].getAttribute("data-tab")===name);
+  if(name==="jobs") renderJobs();
+  if(name==="claims") renderClaims();
+  if(name==="storage") renderStorage();
+  if(name==="dash") renderDash();
+  if(name==="settings") renderSettings();
+}
+
+function readDraftFromForm(){
+  var d = state.draft;
+  d.customer = $("cName").value; d.phone = $("cPhone").value;
+  d.from = $("cFrom").value; d.to = $("cTo").value;
+  d.date = $("cDate").value; d.distanceMi = num($("cDist").value, 0);
+  d.notes = $("cNotes").value;
+}
+function fillDraftForm(){
+  var d = state.draft;
+  $("cName").value = d.customer||""; $("cPhone").value = d.phone||"";
+  $("cFrom").value = d.from||""; $("cTo").value = d.to||"";
+  $("cDate").value = d.date||""; $("cDist").value = num(d.distanceMi,10);
+  $("cNotes").value = d.notes||"";
+}
+
+function renderInventory(){
+  var s = state.settings, d = state.draft, rooms = [], i, it;
+  for(i=0;i<s.catalog.length;i++){ if(rooms.indexOf(s.catalog[i].room)<0) rooms.push(s.catalog[i].room); }
+  var h = "";
+  for(var r=0;r<rooms.length;r++){
+    h += '<div class="roomtitle">'+esc(rooms[r])+'</div>';
+    for(i=0;i<s.catalog.length;i++){ it = s.catalog[i]; if(it.room!==rooms[r]) continue;
+      h += '<div class="invrow"><span class="nm">'+esc(it.name)+'</span><span class="cf">'+num(it.cuft,0)+' cu ft</span>'+
+           '<input inputmode="decimal" type="number" min="0" step="1" data-cat="'+esc(it.name)+'" value="'+num(d.qty[it.name],0)+'"></div>';
+    }
+  }
+  $("invList").innerHTML = h;
+  var inputs = document.querySelectorAll("#invList input[data-cat]");
+  for(i=0;i<inputs.length;i++){ inputs[i].removeEventListener("input", invChanged); inputs[i].addEventListener("input", invChanged); }
+  renderCustomList();
+  var uh = "";
+  for(i=0;i<s.upcharges.length;i++){ var u = s.upcharges[i];
+    uh += '<div class="invrow"><span class="nm">'+esc(u.name)+'</span><span class="cf">'+money(num(u.fee,0))+' ea</span>'+
+          '<input inputmode="decimal" type="number" min="0" step="1" data-up="'+esc(u.name)+'" value="'+num(d.ups[u.name],0)+'"></div>';
+  }
+  $("upList").innerHTML = uh;
+  var uin = document.querySelectorAll("#upList input[data-up]");
+  for(i=0;i<uin.length;i++){ uin[i].removeEventListener("input", upChanged); uin[i].addEventListener("input", upChanged); }
+}
+function invChanged(){ var n = this.getAttribute("data-cat"); state.draft.qty[n] = Math.max(0, num(this.value,0)); save(); recalc(); }
+function upChanged(){ var n = this.getAttribute("data-up"); state.draft.ups[n] = Math.max(0, num(this.value,0)); save(); recalc(); }
+function renderCustomList(){
+  var d = state.draft, h = "";
+  for(var i=0;i<(d.custom||[]).length;i++){ var c = d.custom[i];
+    h += '<div class="invrow"><span class="nm">'+esc(c.name)+' <span class="muted">(custom)</span></span><span class="cf">'+num(c.cuft,0)+' cu ft × '+num(c.qty,0)+'</span>'+
+         '<button class="btn small ghost" data-delcustom="'+i+'">Remove</button></div>';
+  }
+  $("customList").innerHTML = h;
+  var bs = document.querySelectorAll("#customList button[data-delcustom]");
+  for(var j=0;j<bs.length;j++) bs[j].addEventListener("click", function(){ state.draft.custom.splice(num(this.getAttribute("data-delcustom"),0),1); save(); renderCustomList(); recalc(); });
+}
+
+function recalc(){
+  readDraftFromForm();
+  var s = state.settings;
+  curEst = computeEst(state.draft, s);
+  var e = curEst;
+  $("sumCuft").textContent = e.cuft.toLocaleString()+" cu ft";
+  $("sumDensity").textContent = num(s.density,7);
+  $("sumWeight").textContent = Math.round(e.weight).toLocaleString()+" lb";
+  var lines = "";
+  function pl(l, v){ return '<div class="priceline"><span>'+l+'</span><b>'+v+'</b></div>'; }
+  lines += pl("Volume / weight", e.cuft.toLocaleString()+" cu ft · "+Math.round(e.weight).toLocaleString()+" lb");
+  lines += pl("Crew", e.crew+" movers");
+  lines += pl("Truck", esc(e.truck.name)+(e.truck.trips>1 ? " ("+e.truck.trips+" trips)" : ""));
+  lines += pl("Load "+e.loadH.toFixed(2)+" h · Unload "+e.unloadH.toFixed(2)+" h · Travel "+e.travelH.toFixed(2)+" h", e.billH.toFixed(1)+" billable h");
+  lines += pl("Crew cost ("+e.billH.toFixed(1)+" h × "+e.crew+" × "+money(num(s.moverCost,30))+")", money(e.laborCost));
+  lines += pl("Truck cost ("+e.rtMi+" mi round trip × "+money(num(s.costPerMile,1.25))+")", money(e.travelCost));
+  lines += pl("Packing materials ("+e.boxes+" boxes est.)", money(e.materials));
+  lines += pl("<b>Your true cost (break-even)</b>", "<b>"+money(e.cost)+"</b>");
+  lines += pl("Hourly-rate price ("+e.billH.toFixed(1)+" h × "+e.crew+" × "+money(num(s.moverCharge,65))+" + travel fee + materials + upcharges)", money(e.hourlyPrice));
+  lines += pl("Target-margin price ("+num(s.targetMargin,35)+"% margin)", money(e.marginPrice));
+  if(e.upTotal>0) lines += pl("Upcharges included", money(e.upTotal));
+  $("estLines").innerHTML = lines;
+  $("pBE").textContent = money(e.cost);
+  $("pRec").textContent = money(e.recommended);
+  $("pPrem").textContent = money(e.premium);
+  $("pNTE").textContent = money(e.nte);
+  $("pCrew").textContent = e.crew+" movers";
+  $("pTruck").textContent = e.truck.name;
+  $("fHours").value = e.billH.toFixed(1)+" h (est.)";
+  if(!finalTouched){ $("fPrice").value = round2(e.recommended); state.draft.finalPrice = round2(e.recommended); }
+  renderFloor();
+}
+function renderFloor(){
+  var e = curEst; if(!e) return;
+  var price = num($("fPrice").value, 0);
+  var box = $("floorBox");
+  if(price > 0 && price < e.floorPrice - 0.005){
+    box.innerHTML = '<div class="floorwarn"><b>Below your profit floor.</b> '+money(price)+' is under the '+money(e.floorPrice)+
+      ' needed for a '+num(state.settings.floorMargin,25)+'% margin on this job. Raise the price, or tick to override on purpose: '+
+      '<label style="display:inline;color:var(--ink);"><input type="checkbox" id="fOverride" style="width:auto;"> I know — save it anyway</label></div>';
+    var cb = $("fOverride"); if(cb){ cb.checked = !!state.draft.override; cb.addEventListener("change", function(){ state.draft.override = this.checked; save(); }); }
+  } else if(price > 0){
+    box.innerHTML = '<div class="floorok">Margin at '+money(price)+': <b>'+(marginAt(price, e.cost + e.upTotal)*100).toFixed(1)+'%</b> — above your '+num(state.settings.floorMargin,25)+'% floor.</div>';
+  } else { box.innerHTML = ""; }
+}
+function saveQuote(){
+  readDraftFromForm();
+  var d = state.draft, s = state.settings, e = curEst || computeEst(d, s);
+  var msg = $("saveMsg");
+  if(!d.customer || !String(d.customer).trim()){ msg.textContent = "Add a customer name first."; return; }
+  var price = num($("fPrice").value, 0);
+  if(price <= 0){ msg.textContent = "Enter a final price first."; return; }
+  var ovr = $("fOverride") ? $("fOverride").checked : !!d.override;
+  if(price < e.floorPrice - 0.005 && !ovr){ msg.textContent = "That price is below your profit floor — raise it or tick the override."; return; }
+  var job = { id:uid(), demo:false, customer:d.customer, phone:d.phone, from:d.from, to:d.to, date:d.date,
+              distanceMi:num(d.distanceMi,0), items:e.items, ups:e.ups, cuft:e.cuft, price:price,
+              status:"quoted", actuals:null, notes:d.notes };
+  state.jobs.unshift(job);
+  state.draft = blankDraft(); finalTouched = false;
+  save(); fillDraftForm(); renderInventory(); recalc();
+  msg.textContent = "Saved to the Job Book as a quoted job for "+job.customer+".";
+  showTab("jobs");
+}
+
+/* ---------- Job Book ---------- */
+function renderJobs(){
+  var s = state.settings, h = "";
+  if(!state.jobs.length){ $("jobList").innerHTML = '<p class="muted">No jobs yet. Build an estimate and save it.</p>'; return; }
+  for(var i=0;i<state.jobs.length;i++){ var j = state.jobs[i];
+    var ac = jobActualsCalc(j, s);
+    h += '<div class="jobcard"><div class="jobhead" data-open="'+j.id+'"><b>'+esc(j.customer)+'</b>'+
+         '<span class="tag '+esc(j.status)+'">'+esc(j.status)+'</span>'+
+         '<span>'+money(num(j.price,0))+'</span><span class="muted">'+num(j.cuft,0).toLocaleString()+' cu ft'+(j.date ? ' · '+esc(j.date) : '')+'</span>'+
+         (ac ? '<span class="muted">profit <b style="color:'+(ac.profit>=0?'var(--good)':'var(--bad)')+'">'+money(ac.profit)+'</b></span>' : '')+
+         '<span class="spacer"></span><span class="muted">tap to open</span></div>';
+    h += '<div class="jobbody" id="jb_'+j.id+'">';
+    h += '<div class="priceline"><span>Route</span><b>'+esc(j.from||"—")+' → '+esc(j.to||"—")+' ('+num(j.distanceMi,0)+' mi one way)</b></div>';
+    var itemsTxt = [];
+    for(var k=0;k<(j.items||[]).length;k++) itemsTxt.push(j.items[k].qty+"× "+j.items[k].name);
+    h += '<div class="priceline"><span>Inventory</span><b style="white-space:normal;text-align:right;">'+esc(itemsTxt.join(", ")||"—")+'</b></div>';
+    if((j.ups||[]).length){ var ut = []; for(k=0;k<j.ups.length;k++) ut.push(j.ups[k].qty+"× "+j.ups[k].name); h += '<div class="priceline"><span>Upcharges</span><b>'+esc(ut.join(", "))+'</b></div>'; }
+    if(j.notes) h += '<div class="priceline"><span>Notes</span><b style="white-space:normal;text-align:right;">'+esc(j.notes)+'</b></div>';
+    h += '<div class="grid3" style="margin-top:10px;"><div><label>Status</label><select id="js_'+j.id+'">'+
+         ["quoted","booked","completed","lost"].map(function(st){ return '<option value="'+st+'"'+(j.status===st?' selected':'')+'>'+st+'</option>'; }).join("")+'</select></div>'+
+         '<div><label>Actual hours</label><input inputmode="decimal" type="number" min="0" step="0.25" id="ja_h_'+j.id+'" value="'+(j.actuals?num(j.actuals.hours,0):"")+'"></div>'+
+         '<div><label>Actual crew</label><input inputmode="decimal" type="number" min="0" step="1" id="ja_c_'+j.id+'" value="'+(j.actuals?num(j.actuals.crew,0):"")+'"></div>'+
+         '<div><label>Actual round-trip miles</label><input inputmode="decimal" type="number" min="0" step="0.5" id="ja_m_'+j.id+'" value="'+(j.actuals?num(j.actuals.miles,0):"")+'"></div>'+
+         '<div><label>Actual materials ($)</label><input inputmode="decimal" type="number" min="0" step="0.01" id="ja_mat_'+j.id+'" value="'+(j.actuals?num(j.actuals.materials,0):"")+'"></div>'+
+         '<div><label>Amount collected ($)</label><input inputmode="decimal" type="number" min="0" step="0.01" id="ja_col_'+j.id+'" value="'+(j.actuals?num(j.actuals.collected,0):"")+'"></div></div>';
+    var estH = jobEstHours(j, s);
+    h += '<div class="muted" style="margin-top:6px;">Estimated billable hours: <b>'+estH.toFixed(1)+' h</b>';
+    if(ac && j.actuals){ var va = estH>0 ? ((num(j.actuals.hours,0)-estH)/estH*100) : 0;
+      h += ' · Actual: <b>'+num(j.actuals.hours,0)+' h</b> ('+(va>=0?"+":"")+va.toFixed(1)+'% vs estimate) · True cost '+money(ac.cost)+' · <b>Profit '+money(ac.profit)+'</b>'; }
+    h += '</div>';
+    h += '<div class="rowflex" style="margin-top:10px;"><button class="btn small" data-act="save" data-id="'+j.id+'">Save job</button>'+
+         '<button class="btn small ghost" data-act="print" data-id="'+j.id+'">Print quote</button>'+
+         '<button class="btn small ghost" data-act="del" data-id="'+j.id+'">Delete</button></div>';
+    h += '</div></div>';
+  }
+  $("jobList").innerHTML = h;
+  var heads = document.querySelectorAll("#jobList .jobhead");
+  for(var a=0;a<heads.length;a++) heads[a].addEventListener("click", function(){ var b = $("jb_"+this.getAttribute("data-open")); if(b) b.classList.toggle("open"); });
+  var btns = document.querySelectorAll("#jobList button[data-act]");
+  for(var b2=0;b2<btns.length;b2++) btns[b2].addEventListener("click", function(){ jobAction(this.getAttribute("data-act"), this.getAttribute("data-id")); });
+}
+function findJob(id){ for(var i=0;i<state.jobs.length;i++) if(state.jobs[i].id===id) return state.jobs[i]; return null; }
+function jobAction(act, id){
+  var j = findJob(id); if(!j) return;
+  if(act==="del"){ if(!confirm("Delete this job ("+j.customer+")? This can't be undone.")) return; state.jobs = state.jobs.filter(function(x){ return x.id!==id; }); save(); renderJobs(); return; }
+  if(act==="print"){ printJob(j); return; }
+  if(act==="save"){
+    j.status = $("js_"+id).value;
+    var h = $("ja_h_"+id).value, c = $("ja_c_"+id).value, m = $("ja_m_"+id).value, mat = $("ja_mat_"+id).value, col = $("ja_col_"+id).value;
+    if(h!=="" || c!=="" || m!=="" || mat!=="" || col!==""){ j.actuals = { hours:num(h,0), crew:num(c,0), miles:num(m,0), materials:num(mat,0), collected:num(col,0) }; }
+    save(); renderJobs();
+    var b = $("jb_"+id); if(b) b.classList.add("open");
+  }
+}
+
+/* ---------- Claims ---------- */
+function renderClaims(){
+  var open = 0, openAmt = 0, settledAmt = 0, i;
+  for(i=0;i<state.claims.length;i++){ var c = state.claims[i];
+    if(c.status==="open"){ open++; openAmt += num(c.claimed,0); }
+    if(c.status==="settled") settledAmt += num(c.settled,0); }
+  $("claimStats").innerHTML = '<div class="rowflex"><span class="stat" style="flex:1;"><span class="lab">Open claims</span><div class="val">'+open+'</div></span>'+
+    '<span class="stat" style="flex:1;"><span class="lab">Open exposure</span><div class="val">'+money(openAmt)+'</div></span>'+
+    '<span class="stat" style="flex:1;"><span class="lab">Paid in settlements</span><div class="val">'+money(settledAmt)+'</div></span></div>';
+  var h = "";
+  if(!state.claims.length) h = '<p class="muted">No claims on record. Good — keep it that way.</p>';
+  for(i=0;i<state.claims.length;i++){ c = state.claims[i];
+    h += '<div class="jobcard"><div class="rowflex"><b>'+esc(c.item)+'</b><span class="tag '+esc(c.status)+'">'+esc(c.status)+'</span>'+
+         '<span class="muted">'+esc(c.jobCustomer||"")+(c.date ? ' · '+esc(c.date) : '')+'</span><span class="spacer"></span>'+
+         '<span>Claimed <b>'+money(num(c.claimed,0))+'</b>'+(c.status==="settled" ? ' · Settled <b>'+money(num(c.settled,0))+'</b>' : '')+'</span>'+
+         '<button class="btn small ghost" data-delclaim="'+c.id+'">Delete</button></div>'+
+         (c.desc ? '<div class="muted" style="margin-top:4px;">'+esc(c.desc)+'</div>' : '')+'</div>';
+  }
+  $("claimList").innerHTML = h;
+  var bs = document.querySelectorAll("#claimList button[data-delclaim]");
+  for(i=0;i<bs.length;i++) bs[i].addEventListener("click", function(){ var id = this.getAttribute("data-delclaim"); state.claims = state.claims.filter(function(x){ return x.id!==id; }); save(); renderClaims(); });
+}
+function addClaim(){
+  var cust = $("clCustomer").value.trim(), item = $("clItem").value.trim();
+  if(!cust || !item){ $("claimMsg").textContent = "Customer and item are required."; return; }
+  state.claims.unshift({ id:uid(), demo:false, jobCustomer:cust, date:$("clDate").value, item:item,
+    desc:$("clDesc").value, claimed:num($("clClaimed").value,0), status:$("clStatus").value, settled:num($("clSettled").value,0) });
+  save(); $("claimMsg").textContent = "Claim logged."; renderClaims();
+}
+
+/* ---------- Storage ---------- */
+function renderStorage(){
+  var i, mrr = 0, billed = 0;
+  for(i=0;i<state.storage.length;i++){ var st = state.storage[i];
+    if(st.status==="in") mrr += num(st.fee,0);
+    billed += storageMonths(st) * num(st.fee,0); }
+  $("storageStats").innerHTML = '<div class="rowflex"><span class="stat" style="flex:1;"><span class="lab">Units in storage</span><div class="val">'+state.storage.filter(function(x){return x.status==="in";}).length+'</div></span>'+
+    '<span class="stat" style="flex:1;"><span class="lab">Storage income / month</span><div class="val">'+money(mrr)+'</div></span>'+
+    '<span class="stat" style="flex:1;"><span class="lab">Total billed to date</span><div class="val">'+money(billed)+'</div></span></div>';
+  var h = "";
+  if(!state.storage.length) h = '<p class="muted">No storage records.</p>';
+  for(i=0;i<state.storage.length;i++){ st = state.storage[i]; var mo = storageMonths(st);
+    h += '<div class="jobcard"><div class="rowflex"><b>'+esc(st.customer)+'</b><span class="tag '+esc(st.status)+'">'+(st.status==="in"?"in storage":"moved out")+'</span>'+
+         '<span class="muted">'+esc(st.unit)+' · since '+esc(st.start)+(st.status==="out" && st.end ? ' · out '+esc(st.end) : '')+'</span><span class="spacer"></span>'+
+         '<span>'+money(num(st.fee,0))+'/mo · '+mo.toFixed(1)+' mo · billed <b>'+money(mo*num(st.fee,0))+'</b></span>'+
+         '<button class="btn small ghost" data-delstorage="'+st.id+'">Delete</button></div></div>';
+  }
+  $("storageList").innerHTML = h;
+  var bs = document.querySelectorAll("#storageList button[data-delstorage]");
+  for(i=0;i<bs.length;i++) bs[i].addEventListener("click", function(){ var id = this.getAttribute("data-delstorage"); state.storage = state.storage.filter(function(x){ return x.id!==id; }); save(); renderStorage(); });
+}
+function addStorage(){
+  var cust = $("stCustomer").value.trim();
+  if(!cust || !$("stStart").value){ $("storageMsg").textContent = "Customer and start date are required."; return; }
+  state.storage.unshift({ id:uid(), demo:false, customer:cust, unit:$("stUnit").value, start:$("stStart").value,
+    fee:num($("stFee").value,0), status:$("stStatus").value, end:$("stEnd").value });
+  save(); $("storageMsg").textContent = "Storage record added."; renderStorage();
+}
+
+/* ---------- Dashboard ---------- */
+function renderDash(){
+  var s = state.settings, i;
+  var comp = state.jobs.filter(function(j){ return j.status==="completed"; });
+  var decided = state.jobs.filter(function(j){ return j.status==="completed" || j.status==="booked" || j.status==="lost"; });
+  var lost = state.jobs.filter(function(j){ return j.status==="lost"; }).length;
+  var rev = 0, prof = 0, varSum = 0, varN = 0;
+  for(i=0;i<comp.length;i++){ var ac = jobActualsCalc(comp[i], s); if(ac){ rev += num(comp[i].actuals.collected,0); prof += ac.profit;
+    var eh = jobEstHours(comp[i], s); if(eh>0 && comp[i].actuals){ varSum += (num(comp[i].actuals.hours,0)-eh)/eh; varN++; } } }
+  var openExp = 0; for(i=0;i<state.claims.length;i++) if(state.claims[i].status==="open") openExp += num(state.claims[i].claimed,0);
+  var mrr = 0; for(i=0;i<state.storage.length;i++) if(state.storage[i].status==="in") mrr += num(state.storage[i].fee,0);
+  var winRate = decided.length ? Math.round((decided.length-lost)/decided.length*100) : 0;
+  function stat(l, v){ return '<div class="stat"><div class="lab">'+l+'</div><div class="val">'+v+'</div></div>'; }
+  $("dashStats").innerHTML = stat("Jobs on record", state.jobs.length) + stat("Completed", comp.length) +
+    stat("Win rate", winRate+"%") + stat("Collected (completed)", money(rev)) +
+    stat("True profit (completed)", money(prof)) + stat("Avg hours variance", varN ? ((varSum/varN*100)>=0?"+":"")+(varSum/varN*100).toFixed(1)+"%" : "—") +
+    stat("Open claims exposure", money(openExp)) + stat("Storage income / mo", money(mrr));
+  var ah = "";
+  if(!varN) ah = '<p class="muted">Complete a job with actual hours entered and the estimate-vs-actual comparison shows up here.</p>';
+  else { ah = '<div class="tablewrap"><table><tr><th>Job</th><th class="num">Est. hours</th><th class="num">Actual hours</th><th class="num">Variance</th><th class="num">Profit</th></tr>';
+    for(i=0;i<comp.length;i++){ var j = comp[i]; if(!j.actuals) continue; var e2 = jobEstHours(j, s); var v = e2>0 ? (num(j.actuals.hours,0)-e2)/e2*100 : 0; var a2 = jobActualsCalc(j, s);
+      ah += '<tr><td>'+esc(j.customer)+'</td><td class="num">'+e2.toFixed(1)+'</td><td class="num">'+num(j.actuals.hours,0)+'</td><td class="num">'+(v>=0?"+":"")+v.toFixed(1)+'%</td><td class="num">'+(a2?money(a2.profit):"—")+'</td></tr>'; }
+    ah += '</table></div>'; }
+  $("dashAccuracy").innerHTML = ah;
+  var byCust = {};
+  for(i=0;i<state.jobs.length;i++){ var jj = state.jobs[i]; if(jj.status==="lost") continue; var key = jj.customer||"—";
+    byCust[key] = byCust[key] || { n:0, amt:0 }; byCust[key].n++; byCust[key].amt += (jj.actuals && jj.status==="completed") ? num(jj.actuals.collected,0) : num(jj.price,0); }
+  var keys = Object.keys(byCust).sort(function(a,b){ return byCust[b].amt-byCust[a].amt; });
+  var ch = keys.length ? '<div class="tablewrap"><table><tr><th>Customer</th><th class="num">Jobs</th><th class="num">Value</th></tr>' : '<p class="muted">No customers yet.</p>';
+  for(i=0;i<keys.length;i++) ch += '<tr><td>'+esc(keys[i])+'</td><td class="num">'+byCust[keys[i]].n+'</td><td class="num">'+money(byCust[keys[i]].amt)+'</td></tr>';
+  if(keys.length) ch += '</table></div>';
+  $("dashCustomers").innerHTML = ch;
+}
+
+/* ---------- Settings ---------- */
+var SKEYS = [["sCompany","company","t"],["sPhone","phone","t"],["sDensity","density"],["sMoverCost","moverCost"],["sMoverCharge","moverCharge"],
+  ["sLoadRate","loadRate"],["sUnloadRate","unloadRate"],["sAvgSpeed","avgSpeed"],["sCostPerMile","costPerMile"],["sTravelFee","travelFee"],
+  ["sBoxesPer100","boxesPer100"],["sBoxCost","boxCost"],["sFlatSupplies","flatSupplies"],["sTargetMargin","targetMargin"],
+  ["sFloorMargin","floorMargin"],["sPremiumMult","premiumMult"],["sNteFactor","nteFactor"],["sCrew2Max","crew2Max"],["sCrew3Max","crew3Max"]];
+function renderSettings(){
+  var s = state.settings, i;
+  for(i=0;i<SKEYS.length;i++){ var el = $(SKEYS[i][0]); if(el) el.value = (SKEYS[i][2]==="t") ? (s[SKEYS[i][1]]||"") : num(s[SKEYS[i][1]],0); }
+  for(i=0;i<3;i++){ var tn = $("sTruck"+(i+1)+"Name"), tc = $("sTruck"+(i+1)+"Cuft");
+    if(s.trucks[i]){ if(tn) tn.value = s.trucks[i].name||""; if(tc) tc.value = num(s.trucks[i].cuft,0); } }
+  var uh = "";
+  for(i=0;i<s.upcharges.length;i++){ uh += '<div class="invrow"><input type="text" data-upn="'+i+'" value="'+esc(s.upcharges[i].name)+'"><span class="cf">fee $</span>'+
+    '<span style="display:flex;gap:6px;"><input inputmode="decimal" type="number" min="0" step="1" data-upf="'+i+'" value="'+num(s.upcharges[i].fee,0)+'"><button class="btn small ghost" data-updel="'+i+'">✕</button></span></div>'; }
+  $("upEditList").innerHTML = uh;
+  var ch = "";
+  for(i=0;i<s.catalog.length;i++){ ch += '<div class="invrow"><span class="nm">'+esc(s.catalog[i].name)+' <span class="muted">('+esc(s.catalog[i].room)+')</span></span>'+
+    '<span class="cf">cu ft</span><span style="display:flex;gap:6px;"><input inputmode="decimal" type="number" min="0" step="1" data-catf="'+i+'" value="'+num(s.catalog[i].cuft,0)+'"><button class="btn small ghost" data-catdel="'+i+'">✕</button></span></div>'; }
+  $("catEditList").innerHTML = ch;
+  bindSettingsEditors();
+}
+function bindSettingsEditors(){
+  var i, els;
+  for(i=0;i<SKEYS.length;i++){ (function(k){ var el = $(k[0]); if(!el) return;
+    el.removeEventListener("input", el._mbh); el._mbh = function(){ if(k[2]==="t") state.settings[k[1]] = this.value; else state.settings[k[1]] = Math.max(0, num(this.value,0)); save(); recalc(); }; el.addEventListener("input", el._mbh); })(SKEYS[i]); }
+  for(i=0;i<3;i++){ (function(idx){ var tn = $("sTruck"+(idx+1)+"Name"), tc = $("sTruck"+(idx+1)+"Cuft");
+    if(tn){ tn.removeEventListener("input", tn._mbh); tn._mbh = function(){ state.settings.trucks[idx].name = this.value; save(); recalc(); }; tn.addEventListener("input", tn._mbh); }
+    if(tc){ tc.removeEventListener("input", tc._mbh); tc._mbh = function(){ state.settings.trucks[idx].cuft = Math.max(0, num(this.value,0)); save(); recalc(); }; tc.addEventListener("input", tc._mbh); } })(i); }
+  els = document.querySelectorAll("#upEditList input[data-upn]"); for(i=0;i<els.length;i++) els[i].addEventListener("change", function(){ state.settings.upcharges[num(this.getAttribute("data-upn"),0)].name = this.value; save(); renderInventory(); recalc(); });
+  els = document.querySelectorAll("#upEditList input[data-upf]"); for(i=0;i<els.length;i++) els[i].addEventListener("change", function(){ state.settings.upcharges[num(this.getAttribute("data-upf"),0)].fee = Math.max(0, num(this.value,0)); save(); renderInventory(); recalc(); });
+  els = document.querySelectorAll("#upEditList button[data-updel]"); for(i=0;i<els.length;i++) els[i].addEventListener("click", function(){ state.settings.upcharges.splice(num(this.getAttribute("data-updel"),0),1); save(); renderSettings(); renderInventory(); recalc(); });
+  els = document.querySelectorAll("#catEditList input[data-catf]"); for(i=0;i<els.length;i++) els[i].addEventListener("change", function(){ state.settings.catalog[num(this.getAttribute("data-catf"),0)].cuft = Math.max(0, num(this.value,0)); save(); renderInventory(); recalc(); });
+  els = document.querySelectorAll("#catEditList button[data-catdel]"); for(i=0;i<els.length;i++) els[i].addEventListener("click", function(){ state.settings.catalog.splice(num(this.getAttribute("data-catdel"),0),1); save(); renderSettings(); renderInventory(); recalc(); });
+}
+
+/* ---------- Print ---------- */
+function printJob(j){
+  var s = state.settings;
+  var rows = "";
+  for(var i=0;i<(j.items||[]).length;i++){ var it = j.items[i]; rows += '<tr><td>'+esc(it.name)+'</td><td style="text-align:right;">'+it.qty+'</td><td style="text-align:right;">'+(it.cuft*it.qty)+' cu ft</td></tr>'; }
+  var upRows = "";
+  for(i=0;i<(j.ups||[]).length;i++){ var u = j.ups[i]; upRows += '<tr><td>'+esc(u.name)+'</td><td style="text-align:right;">'+u.qty+'</td><td style="text-align:right;">'+money(u.fee*u.qty)+'</td></tr>'; }
+  var estH = jobEstHours(j, s);
+  var rec = computeSavedRec(j, s);
+  $("printSheet").innerHTML = '<h1>'+esc(s.company||"MoveBook")+' — Moving Estimate</h1>'+
+    '<div>'+esc(s.phone||"")+'</div><hr>'+
+    '<p><b>Customer:</b> '+esc(j.customer)+(j.phone ? ' · '+esc(j.phone) : '')+'<br><b>From:</b> '+esc(j.from||"—")+'<br><b>To:</b> '+esc(j.to||"—")+'<br><b>Date:</b> '+esc(j.date||"—")+'</p>'+
+    '<table style="width:100%;border-collapse:collapse;">'+rows+'</table>'+
+    (upRows ? '<h3>Extras</h3><table style="width:100%;border-collapse:collapse;">'+upRows+'</table>' : '')+
+    '<p><b>Total volume:</b> '+num(j.cuft,0).toLocaleString()+' cu ft · <b>Estimated weight:</b> '+Math.round(num(j.cuft,0)*num(s.density,7)).toLocaleString()+' lb<br>'+
+    '<b>Crew:</b> '+crewFor(num(j.cuft,0), s)+' movers · <b>Truck:</b> '+esc(truckFor(num(j.cuft,0), s).name)+' · <b>Estimated time:</b> '+estH.toFixed(1)+' hours</p>'+
+    '<p style="font-size:17px;"><b>Estimate: '+money(num(j.price,0))+'</b> &nbsp;·&nbsp; <b>Not to exceed: '+money(rec.nte)+'</b></p>'+
+    '<p>Estimate based on the inventory above. Final charges for hourly work are based on actual time; the not-to-exceed amount is the ceiling for the scope listed. Items added on move day, or access conditions different from those described, may change the price. Valuation and state-required paperwork are provided separately.</p>'+
+    (j.notes ? '<p><b>Notes:</b> '+esc(j.notes)+'</p>' : '');
+  window.print();
+}
+function computeSavedRec(j, s){
+  /* rebuild recommended/NTE for a saved job from its inventory using current settings */
+  var d = blankDraft(); d.distanceMi = num(j.distanceMi,0);
+  for(var i=0;i<(j.items||[]).length;i++){ var it = j.items[i];
+    var found = false; for(var k=0;k<s.catalog.length;k++) if(s.catalog[k].name===it.name){ d.qty[it.name] = it.qty; found = true; break; }
+    if(!found) d.custom.push({ name:it.name, cuft:it.cuft, qty:it.qty }); }
+  for(i=0;i<(j.ups||[]).length;i++) d.ups[j.ups[i].name] = j.ups[i].qty;
+  var e = computeEst(d, s);
+  return { recommended: round2(num(j.price,0)) , nte: round2(num(j.price,0) * num(s.nteFactor,1.10)), est:e };
+}
+
+/* ---------- Data controls ---------- */
+function exportData(){
+  var blob = new Blob([JSON.stringify(state, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "movebook-backup.json";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  $("dataMsg").textContent = "Backup exported.";
+}
+function importData(file){
+  var r = new FileReader();
+  r.onload = function(){
+    try{ var p = JSON.parse(r.result);
+      if(p && p.settings && p.jobs && p.claims && p.storage && p.draft){ state = p; save(); fillDraftForm(); renderInventory(); renderSettings(); recalc(); $("dataMsg").textContent = "Backup imported."; }
+      else $("dataMsg").textContent = "That file doesn't look like a MoveBook backup — nothing changed.";
+    }catch(e){ $("dataMsg").textContent = "Couldn't read that file — nothing changed."; }
+  };
+  r.readAsText(file);
+}
+
+/* ---------- init ---------- */
+function init(){
+  load();
+  fillDraftForm();
+  renderInventory();
+  var navBtns = document.querySelectorAll("#tabs button");
+  for(var i=0;i<navBtns.length;i++) navBtns[i].addEventListener("click", function(){ showTab(this.getAttribute("data-tab")); });
+  var formIds = ["cName","cPhone","cFrom","cTo","cDate","cDist","cNotes"];
+  for(i=0;i<formIds.length;i++) $(formIds[i]).addEventListener("input", recalc);
+  $("fPrice").addEventListener("input", function(){ finalTouched = true; state.draft.finalPrice = num(this.value,0); save(); renderFloor(); });
+  $("ciAdd").addEventListener("click", function(){
+    var n = $("ciName").value.trim(); if(!n) return;
+    state.draft.custom.push({ name:n, cuft:Math.max(0, num($("ciCuft").value,0)), qty:Math.max(0, num($("ciQty").value,1)) });
+    $("ciName").value = ""; save(); renderCustomList(); recalc();
+  });
+  $("btnSaveQuote").addEventListener("click", saveQuote);
+  $("btnPrintQuote").addEventListener("click", function(){
+    readDraftFromForm(); var d = state.draft, e = curEst || computeEst(d, state.settings);
+    var tmp = { customer:d.customer||"(no name yet)", phone:d.phone, from:d.from, to:d.to, date:d.date, distanceMi:num(d.distanceMi,0),
+                items:e.items, ups:e.ups, cuft:e.cuft, price:num($("fPrice").value,0), notes:d.notes };
+    printJob(tmp);
+  });
+  $("btnResetDraft").addEventListener("click", function(){ state.draft = blankDraft(); finalTouched = false; save(); fillDraftForm(); renderInventory(); recalc(); $("saveMsg").textContent = ""; });
+  $("btnAddClaim").addEventListener("click", addClaim);
+  $("btnAddStorage").addEventListener("click", addStorage);
+  $("clDate").value = todayStr();
+  $("btnAddUpcharge").addEventListener("click", function(){ state.settings.upcharges.push({ name:"New upcharge", fee:50 }); save(); renderSettings(); renderInventory(); });
+  $("btnAddCatalog").addEventListener("click", function(){ var n = $("ncName").value.trim(); if(!n) return;
+    state.settings.catalog.push({ name:n, room:$("ncRoom").value.trim()||"Garage & Misc", cuft:Math.max(0, num($("ncCuft").value,0)) });
+    $("ncName").value = ""; save(); renderSettings(); renderInventory(); recalc(); });
+  $("btnExport").addEventListener("click", exportData);
+  $("btnImportBtn").addEventListener("click", function(){ $("fileImport").click(); });
+  $("fileImport").addEventListener("change", function(){ if(this.files && this.files[0]) importData(this.files[0]); });
+  $("btnClearDemo").addEventListener("click", function(){
+    state.jobs = state.jobs.filter(function(j){ return !j.demo; });
+    state.claims = state.claims.filter(function(c){ return !c.demo; });
+    state.storage = state.storage.filter(function(x){ return !x.demo; });
+    save(); $("dataMsg").textContent = "Sample data cleared."; renderJobs(); renderClaims(); renderStorage();
+  });
+  $("btnErase").addEventListener("click", function(){
+    if(!confirm("Erase ALL MoveBook data (settings + every job, claim and storage record) and start fresh? Export a backup first if unsure.")) return;
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    state = seedState(); save(); fillDraftForm(); renderInventory(); renderSettings(); recalc();
+    $("dataMsg").textContent = "Erased. Fresh start with sample data loaded.";
+  });
+  recalc();
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+
+<style id="ww-legal-css">
+.ww-legal-overlay{position:fixed;inset:0;z-index:99990;background:rgba(10,12,14,.72);display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box}
+.ww-legal-card{background:#fff;color:#17202a;border-radius:14px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:22px 20px;box-sizing:border-box;box-shadow:0 18px 50px rgba(0,0,0,.35);font-family:inherit}
+.ww-legal-card h2{margin:0 0 4px;font-size:22px}
+.ww-legal-card h3{margin:16px 0 6px}
+.ww-legal-sum{font-size:16px;line-height:1.45;margin:12px 0}
+.ww-legal-sum p{margin:6px 0;font-weight:600}
+.ww-legal-note{font-size:13px;color:#445; margin:10px 0}
+.ww-legal-updated{background:#fff3cd;border:1px solid #e3c565;border-radius:8px;padding:8px 10px;font-size:14px;margin:10px 0}
+.ww-legal-btn{display:block;width:100%;min-height:48px;margin:10px 0;padding:12px 14px;font-size:16px;border-radius:10px;border:1px solid #9db2c3;background:#eef4f8;color:#17202a;cursor:pointer;box-sizing:border-box}
+.ww-legal-agree{background:#17603a;border-color:#17603a;color:#fff;font-weight:700}
+.ww-legal-page{position:fixed;inset:0;z-index:99980;background:#fff;color:#17202a;overflow:auto;padding:18px 16px 40px;box-sizing:border-box}
+.ww-legal-page .ww-legal-inner{max-width:680px;margin:0 auto}
+.ww-legal-page h2{font-size:21px}.ww-legal-page h3{font-size:17px;margin-top:18px}.ww-legal-page p,.ww-legal-page li{font-size:14.5px;line-height:1.55}
+.ww-legal-close{min-height:48px;padding:10px 18px;font-size:15px;border-radius:10px;border:1px solid #9db2c3;background:#eef4f8;cursor:pointer}
+.ww-legal-open-btn{min-height:48px}
+.ww-legal-check{display:flex;gap:10px;align-items:flex-start;margin:12px 0;font-size:15px;line-height:1.4;cursor:pointer;text-align:left}
+.ww-legal-check input{width:22px;height:22px;min-width:22px;margin-top:1px;cursor:pointer}
+.ww-legal-agree[disabled]{opacity:.45;cursor:not-allowed}
+[hidden]{display:none !important}
+</style>
+
+<div id="wwLegalOverlay" class="ww-legal-overlay" hidden>
+  <div class="ww-legal-card" role="dialog" aria-modal="true" aria-labelledby="wwLegalTitle">
+    <h2>MoveBook</h2>
+    <h3 id="wwLegalTitle" style="margin-top:2px">Terms of Use</h3>
+    <div id="wwLegalUpdated" class="ww-legal-updated" hidden>Our terms were updated (v1.0).</div>
+    <div class="ww-legal-sum">
+      <p>Your data stays on your device.</p>
+      <p>Estimates are aids, not guarantees.</p>
+      <p>You're responsible for checking outputs before you rely on them.</p>
+    </div>
+    <p class="ww-legal-note">The full Terms and Disclaimer are one tap away, now and any time in Settings → Legal.</p>
+    <button type="button" class="ww-legal-btn" id="wwLegalReadTerms">Read the full Terms</button>
+    <button type="button" class="ww-legal-btn" id="wwLegalReadDisc">Read the Estimator Disclaimer</button>
+    <label class="ww-legal-check" for="wwLegalCheck"><input type="checkbox" id="wwLegalCheck"><span>I have read the disclaimer and I agree to the Terms of Use</span></label>
+    <button type="button" class="ww-legal-btn ww-legal-agree" id="wwLegalAgree" disabled>I Agree</button>
+  </div>
+</div>
+<div id="wwLegalReader" class="ww-legal-page" hidden>
+  <div class="ww-legal-inner">
+    <button type="button" class="ww-legal-close" id="wwLegalReaderBack">← Back</button>
+    <div id="wwLegalReaderBody"></div>
+  </div>
+</div>
+<div id="wwLegalPage" class="ww-legal-page" hidden>
+  <div class="ww-legal-inner">
+    <button type="button" class="ww-legal-close" id="wwLegalPageClose">← Back</button>
+    <h2>Legal</h2>
+    <h3>Terms of Use</h3>
+    <div id="wwLegalTermsText"><h2>Terms of Use — White Wolf Digital Apps</h2>
+<p><strong>Version 1.0</strong></p>
+<p><strong>Seller: White Wolf Tree Service LLC, selling digital products under the name &quot;White Wolf Digital&quot;</strong></p>
+<p><strong>Contact: whitewolfoklahoma@gmail.com</strong></p>
+<hr>
+<h3>1. What you&#x27;re buying</h3>
+<p>Our apps (including ForgeFit AI, ForgeKitchen, TreeBid Pro, SnowBid,</p>
+<p>WashPrice Pro, RoofSquares, JobProfit Tracker, PastureLedger, and the other</p>
+<p>titles sold under White Wolf Digital) are single-file software tools. When</p>
+<p>you buy one, you are buying a <strong>license to use the file</strong>, not ownership of</p>
+<p>the software itself.</p>
+<h3>2. Your license</h3>
+<ul>
+<li>You may use the app for your own personal or business work.</li>
+<li>You may open it on your own devices (phone, tablet, computer) and move your</li>
+</ul>
+<p>  own data between them using the app&#x27;s built-in backup/export tools.</p>
+<ul>
+<li>You may <strong>not</strong> resell, redistribute, give away, upload, or share the app</li>
+</ul>
+<p>  file (or a copy of it) with anyone else — including posting it online,</p>
+<p>  bundling it with other products, or selling access to it.</p>
+<ul>
+<li>You may <strong>not</strong> claim the app as your own work, remove its branding or</li>
+</ul>
+<p>  notices, or use it to build a competing product for resale.</p>
+<ul>
+<li>One purchase = one buyer. A business purchase covers the buyer and their</li>
+</ul>
+<p>  own employees using it for that business&#x27;s work; it does not cover other</p>
+<p>  businesses.</p>
+<h3>3. Your data stays yours — and stays on your device</h3>
+<ul>
+<li>The current versions of our apps run <strong>entirely on your device</strong>. They have</li>
+</ul>
+<p>  no accounts, no sign-in, no analytics, and they collect, transmit, and store</p>
+<p>  <strong>none</strong> of your information on any server. We never see your data.</p>
+<ul>
+<li>Your records are stored in your browser/app storage on your device. **You</li>
+</ul>
+<p>  are responsible for backing them up** using the app&#x27;s export tools. If you</p>
+<p>  clear your browser data, lose your device, or uninstall the app, your</p>
+<p>  records may be permanently lost, and we cannot recover them — we never had</p>
+<p>  a copy.</p>
+<ul>
+<li>Files you export (backups, quotes, PDFs) are under your control. Where you</li>
+</ul>
+<p>  store or send them is up to you.</p>
+<h3>4. Estimates are tools, not guarantees</h3>
+<p>Every number our apps produce — bids, prices, costs, calorie targets,</p>
+<p>projections, schedules, totals — is an **estimate generated from the</p>
+<p>information you enter and the settings you choose**. Outputs are aids for</p>
+<p>your own judgment, not guarantees of price, profit, outcome, or result. You</p>
+<p>are responsible for checking any output before relying on it (see also the</p>
+<p>disclaimer that applies to your app: Health Disclaimer for fitness/nutrition</p>
+<p>apps, Estimator Disclaimer for contractor tools). If an input is wrong, the</p>
+<p>output will be wrong.</p>
+<h3>5. Acceptable use</h3>
+<p>Don&#x27;t use the apps to break the law, infringe anyone&#x27;s rights, or</p>
+<p>misrepresent quotes, invoices, or records to your own customers. For the</p>
+<p>fitness apps, the guardrails in the app (healthy-rate limits, calorie floor)</p>
+<p>are part of the product — don&#x27;t treat the app as a way around them.</p>
+<h3>6. Provided &quot;as is&quot;</h3>
+<p>The apps are provided **&quot;as is&quot; and &quot;as available,&quot; without warranties of</p>
+<p>any kind**, express or implied — including merchantability, fitness for a</p>
+<p>particular purpose, accuracy of calculations, and uninterrupted or</p>
+<p>error-free operation — to the maximum extent allowed by law. Software has</p>
+<p>bugs; browsers change; we work to fix problems but do not promise any app is</p>
+<p>error-free or will work on every device or browser forever.</p>
+<h3>7. Limitation of liability</h3>
+<p>To the maximum extent allowed by law:</p>
+<ul>
+<li>We are **not liable for indirect, incidental, special, or consequential</li>
+</ul>
+<p>  damages** — including lost profits, lost or mispriced jobs, lost data, or</p>
+<p>  business interruption — arising from use of the apps.</p>
+<ul>
+<li>Our total liability for any claim connected to an app is limited to the</li>
+</ul>
+<p>  <strong>amount you paid for that app</strong>.</p>
+<ul>
+<li>Nothing in these terms limits liability that cannot legally be limited.</li>
+</ul>
+<h3>8. Refunds</h3>
+<p>Refunds are handled **by the storefront you bought from, under that</p>
+<p>storefront&#x27;s policy** — Gumroad&#x27;s refund policy for Gumroad purchases, and</p>
+<p>Google Play&#x27;s refund policy for Play purchases. These terms do not add to,</p>
+<p>replace, or override the storefront&#x27;s refund rules. If a file is defective</p>
+<p>and won&#x27;t open, contact us at whitewolfoklahoma@gmail.com and we&#x27;ll fix or</p>
+<p>replace the file.</p>
+<h3>9. Updates and changes to these terms</h3>
+<ul>
+<li>We may release updated versions of an app. Updates may add, change, or</li>
+</ul>
+<p>  remove features.</p>
+<ul>
+<li>We may update these terms. The version you agreed to is recorded in the</li>
+</ul>
+<p>  app (version number and date) at first-run acceptance. If terms change,</p>
+<p>  the app may ask you to accept the new version once on next open. Updated</p>
+<p>  terms apply going forward, not retroactively.</p>
+<ul>
+<li>If you don&#x27;t agree to an updated version of the terms, stop using the app.</li>
+</ul>
+<h3>10. Governing law</h3>
+<p>These terms are governed by the laws of the <strong>State of Oklahoma</strong>, USA.</p>
+<p>(Attorney to confirm governing law and venue before publication.)</p>
+<h3>11. Contact</h3>
+<p>White Wolf Tree Service LLC (White Wolf Digital) —</p>
+<p>whitewolfoklahoma@gmail.com.</p>
+<hr>
+<h3>CONNECTED FEATURES — takes effect only when these features ship</h3>
+<p>*The sections below apply only to future connected features (device sync via</p>
+<p>Health Connect, AI voice logging, and the AI Goal Preview in ForgeFit). They</p>
+<p>do not apply to the current offline versions, which never transmit data.*</p>
+<ul>
+<li><strong>Opt-in only.</strong> Connected features are off by default. Each one asks for</li>
+</ul>
+<p>  your separate, explicit consent — on its own consent screen, in plain</p>
+<p>  language — before anything leaves your device. Declining never disables</p>
+<p>  the app&#x27;s offline features.</p>
+<ul>
+<li><strong>What gets sent.</strong> Only what the consent screen names, only when you use</li>
+</ul>
+<p>  the feature: for example, a meal description (text, or audio only if cloud</p>
+<p>  transcription is on) for AI voice logging, or the single photo you choose</p>
+<p>  for an AI Goal Preview.</p>
+<ul>
+<li><strong>No retention by us.</strong> Our relay service passes your request to the named</li>
+</ul>
+<p>  AI provider and keeps nothing — no copies of your photos, audio,</p>
+<p>  transcripts, or entries are stored on our servers. Provider handling is</p>
+<p>  described on the consent screen and in the Privacy Policy.</p>
+<ul>
+<li><strong>Health data stays on the device.</strong> Device sync (Health Connect) reads</li>
+</ul>
+<p>  your health data on your phone and stores it in the app on your phone. It</p>
+<p>  is not uploaded to us.</p>
+<ul>
+<li><strong>Allowances.</strong> Some connected features run on third-party AI services we</li>
+</ul>
+<p>  pay for per use, so they may include a monthly allowance described in the</p>
+<p>  app (for example, a set number of AI previews or voice entries per month),</p>
+<p>  with optional additional credits. Allowances and pricing will be shown in</p>
+<p>  the app before you use the feature; they are not a subscription unless the</p>
+<p>  app says so in plain words.</p>
+<ul>
+<li><strong>Permissions.</strong> Connected features may request device permissions (such</li>
+</ul>
+<p>  as Health Connect access or the microphone) at the moment you first use</p>
+<p>  them. You can revoke permissions any time in your device settings; the</p>
+<p>  related feature will simply stop working.</p></div>
+    <h3>Estimator Disclaimer</h3><div id="wwLegalDiscText"><h2>Estimator Disclaimer — Contractor &amp; Trade Tools</h2>
+<p>**Applies to: TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit</p>
+<p>Tracker, FieldForms Toolkit, PaintPro, FenceDeck, MarketMaker, and the other</p>
+<p>estimating/pricing tools sold under White Wolf Digital — including bundles</p>
+<p>that contain them.**</p>
+<h3>Estimating aids, not finished quotes</h3>
+<ul>
+<li>These apps are <strong>estimating and record-keeping aids</strong>. Every bid, price,</li>
+</ul>
+<p>  cost, measurement, and total they produce is an **estimate based on the</p>
+<p>  information and rates you enter**.</p>
+<ul>
+<li>**You — the business owner — are responsible for verifying everything</li>
+</ul>
+<p>  before you quote a customer:** measurements and quantities, site</p>
+<p>  conditions, your current material and labor costs, your rates and margins,</p>
+<p>  taxes, permit and license requirements, disposal rules, and any contract</p>
+<p>  terms.</p>
+<ul>
+<li>Default rates, presets, and sample data included in the apps are starting</li>
+</ul>
+<p>  points only. They are not market prices, not industry standards, and not</p>
+<p>  a recommendation of what you should charge.</p>
+<ul>
+<li>A saved quote keeps the prices in effect when you created it (price</li>
+</ul>
+<p>  snapshot). Changing your presets later does not change saved quotes —</p>
+<p>  and a saved quote is still your responsibility to review before sending.</p>
+<h3>Specific tools</h3>
+<ul>
+<li><strong>TreeBid Pro:</strong> tree work is dangerous and site-specific. Difficulty</li>
+</ul>
+<p>  factors and presets cannot see the actual tree, lean, rot, targets, or</p>
+<p>  access. Inspect every job in person before final pricing. The &quot;Invoice</p>
+<p>  with Wave&quot; feature is an open-and-paste handoff — TreeBid does not</p>
+<p>  connect to Wave, and the invoice you send from Wave is yours.</p>
+<ul>
+<li><strong>RoofSquares / measurement tools:</strong> confirm roof measurements and pitch</li>
+</ul>
+<p>  in person or by your usual method before ordering materials.</p>
+<ul>
+<li><strong>SnowBid / seasonal tools:</strong> route times, snowfall amounts, and service</li>
+</ul>
+<p>  pricing vary by storm and site; seasonal contracts are your agreement</p>
+<p>  with your customer, on your terms.</p>
+<ul>
+<li><strong>JobProfit Tracker:</strong> profit figures depend on the costs you enter.</li>
+</ul>
+<p>  The app is not accounting or tax software and does not replace your</p>
+<p>  bookkeeper or accountant.</p>
+<h3>Bottom line</h3>
+<p>If an output and your judgment disagree, trust your judgment — then fix the</p>
+<p>input. We are not responsible for jobs won, lost, or mispriced based on app</p>
+<p>outputs, within the limits of the Terms of Use.</p></div>
+    <h3>Privacy</h3>
+    <p>This app has no accounts and collects no data. Everything you enter is stored only on this device, in this browser's local storage. Nothing is uploaded, tracked, or shared. Exported backup files are under your control — where you store or send them is up to you. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, so keep backups using the app's export tools.</p>
+    <p id="wwLegalAcceptLine"></p>
+    <p><strong>Sold by White Wolf Tree Service LLC (White Wolf Digital) — whitewolfoklahoma@gmail.com</strong></p>
+  </div>
+</div>
+
+<script>
+/* White Wolf Digital — in-app legal pattern v1 (Terms acceptance + Settings > Legal) */
+const TERMS_VERSION = "1.0";
+(function(){
+  var WW_KEY = "movebook_v1";
+  var WW_SAVE = "save";
+  var WW_DISC = true;
+  function wwRaw(){ try{ var r = localStorage.getItem(WW_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+  function wwStateObj(){ try{ if(typeof state !== "undefined" && state && typeof state === "object") return state; }catch(e){} return null; }
+  function wwGetLegal(){
+    var st = wwStateObj(); if(st && st.legal && typeof st.legal === "object") return st.legal;
+    var r = wwRaw(); if(r && r.legal && typeof r.legal === "object") return r.legal;
+    return null;
+  }
+  function wwPersist(rec){
+    var st = wwStateObj();
+    if(st){ st.legal = rec;
+      try{ if(WW_SAVE === "saveState" && typeof saveState === "function"){ saveState(); return; } }catch(e){}
+      try{ if(WW_SAVE === "save" && typeof save === "function"){ save(); return; } }catch(e){}
+    }
+    try{ var r = wwRaw() || {}; r.legal = rec; localStorage.setItem(WW_KEY, JSON.stringify(r)); }catch(e){}
+  }
+  function wwAcceptLine(){
+    var el = document.getElementById("wwLegalAcceptLine"); if(!el) return;
+    var rec = wwGetLegal();
+    if(rec && rec.acceptedDate) el.textContent = "You agreed to Terms v" + (rec.termsVersion || TERMS_VERSION) + " on " + rec.acceptedDate + ".";
+    else el.textContent = "No acceptance recorded yet on this device.";
+  }
+  function wwShowReader(which){
+    var body = document.getElementById("wwLegalReaderBody");
+    var src = document.getElementById(which === "disc" ? "wwLegalDiscText" : "wwLegalTermsText");
+    if(!body || !src) return;
+    body.innerHTML = src.innerHTML;
+    document.getElementById("wwLegalReader").hidden = false;
+  }
+  function wwOpenLegal(){ wwAcceptLine(); document.getElementById("wwLegalPage").hidden = false; }
+  window.__wwOpenLegal = wwOpenLegal;
+  document.addEventListener("click", function(ev){
+    var t = ev.target && ev.target.closest ? ev.target.closest("[data-ww-legal]") : null;
+    if(t){ ev.preventDefault(); wwOpenLegal(); }
+  });
+  var agreeBtn = document.getElementById("wwLegalAgree");
+  var wwCheck = document.getElementById("wwLegalCheck");
+  function wwGate(){ if(agreeBtn && wwCheck) agreeBtn.disabled = !wwCheck.checked; }
+  if(wwCheck) wwCheck.addEventListener("change", wwGate);
+  wwGate();
+  if(agreeBtn) agreeBtn.addEventListener("click", function(){
+    if(wwCheck && !wwCheck.checked){ wwGate(); return; }
+    var rec = { termsVersion: TERMS_VERSION, acceptedDate: new Date().toISOString().slice(0,10), disclaimerShown: WW_DISC };
+    wwPersist(rec);
+    document.getElementById("wwLegalOverlay").hidden = true;
+    wwAcceptLine();
+  });
+  var rt = document.getElementById("wwLegalReadTerms");
+  if(rt) rt.addEventListener("click", function(){ wwShowReader("terms"); });
+  var rd = document.getElementById("wwLegalReadDisc");
+  if(rd) rd.addEventListener("click", function(){ wwShowReader("disc"); });
+  var rb = document.getElementById("wwLegalReaderBack");
+  if(rb) rb.addEventListener("click", function(){ document.getElementById("wwLegalReader").hidden = true; });
+  var pc = document.getElementById("wwLegalPageClose");
+  if(pc) pc.addEventListener("click", function(){ document.getElementById("wwLegalPage").hidden = true; });
+  var rec = wwGetLegal();
+  if(rec && rec.termsVersion === TERMS_VERSION){
+    var st2 = wwStateObj();
+    if(st2 && !st2.legal) wwPersist(rec);
+    wwAcceptLine();
+  } else {
+    if(rec && rec.termsVersion){ var u = document.getElementById("wwLegalUpdated"); if(u) u.hidden = false; }
+    document.getElementById("wwLegalOverlay").hidden = false;
+  }
+})();
+</script>
+
+</body>
+</html>
